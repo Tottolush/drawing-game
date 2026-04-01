@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>РИСУЕМ ВМЕСТЕ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#0a0a0f;color:#fff;font-family:'Nunito',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.screen{display:none;width:100%;max-width:480px;padding:24px 20px;flex-direction:column;align-items:center}
+.screen.active{display:flex}
+.title{font-size:60px;font-weight:900;color:#FFE600;text-shadow:0 0 40px #FFE60088,4px 4px 0 #b8a000;line-height:1;text-align:center;margin-bottom:8px}
+.sub{font-size:14px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:3px;margin-bottom:32px}
+.lbl{font-size:13px;font-weight:900;color:#FFE600;text-transform:uppercase;letter-spacing:3px;margin-bottom:10px;align-self:flex-start}
+.inp{width:100%;background:#1a1a25;border:3px solid #333;border-radius:12px;padding:14px 18px;font-family:'Nunito',sans-serif;font-size:20px;font-weight:700;color:#fff;outline:none;margin-bottom:16px}
+.inp:focus{border-color:#FFE600;box-shadow:0 0 20px #FFE60033}
+.btn{width:100%;padding:16px;border:none;border-radius:12px;font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;text-transform:uppercase;cursor:pointer;margin-top:10px;transition:transform .1s}
+.btn:active{transform:scale(.97)}
+.btn-y{background:#FFE600;color:#0a0a0f;box-shadow:0 4px 0 #b8a000}
+.btn-g{background:transparent;color:#555;border:2px solid #222;font-size:15px}
+.mini-btn{padding:8px 16px;border:none;border-radius:8px;font-family:'Nunito',sans-serif;font-weight:900;font-size:12px;text-transform:uppercase;cursor:pointer;margin:4px}
+.btn-r{background:#ff3b5c;color:#fff}
+.btn-b{background:#1a1a25;color:#666;border:2px solid #2a2a35}
+
+/* GAME */
+#s-game{max-width:100vw;padding:0;height:100vh;justify-content:space-between}
+.top-bar{width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#0d0d18;border-bottom:2px solid #1a1a25}
+.word-label{font-size:13px;font-weight:900;color:#FFE600;text-transform:uppercase;letter-spacing:3px}
+.word-val{font-size:20px;font-weight:900;color:#fff;letter-spacing:3px}
+.players-bar{font-size:12px;color:#555;font-weight:700}
+
+.canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:8px;width:100%}
+canvas{border:3px solid #2a2a35;border-radius:12px;background:#fff;max-width:100%;touch-action:none}
+
+.bottom-bar{width:100%;padding:10px;background:#0d0d18;border-top:2px solid #1a1a25;display:flex;flex-direction:column;align-items:center;gap:8px}
+.joystick-label{font-size:12px;font-weight:900;color:var(--pc);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px}
+.joystick-base{width:90px;height:90px;border-radius:50%;background:#1a1a25;border:3px solid var(--pc);position:relative;touch-action:none}
+.joystick-knob{width:32px;height:32px;border-radius:50%;background:var(--pc);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 0 16px var(--pc);pointer-events:none}
+.action-btns{display:flex;gap:6px}
+
+/* WAITING */
+.waiting-msg{font-size:18px;font-weight:700;color:#666;text-align:center;margin:20px 0}
+.players-list{width:100%;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:16px 0}
+.player-chip{padding:8px 16px;border-radius:20px;font-size:14px;font-weight:700;background:#1a1a25;border:2px solid #2a2a35}
+</style>
+</head>
+<body>
+
+<!-- JOIN -->
+<div class="screen active" id="s-join">
+  <div class="title">РИСУЕМ</div>
+  <div class="sub">Командная игра</div>
+  <div class="lbl">Код комнаты</div>
+  <input class="inp" id="room-id" placeholder="Например: ИГРА1" maxlength="10" style="text-transform:uppercase"/>
+  <div class="lbl">Твоё имя</div>
+  <input class="inp" id="player-name" placeholder="Например: Юра" maxlength="20"/>
+  <button class="btn btn-y" onclick="joinRoom()">Войти в комнату</button>
+</div>
+
+<!-- WAITING -->
+<div class="screen" id="s-waiting">
+  <div class="title" style="font-size:40px">⏳</div>
+  <div class="sub">Ждём игроков</div>
+  <div class="waiting-msg" id="waiting-msg">Подключено: 0</div>
+  <div class="players-list" id="players-list"></div>
+  <div style="font-size:13px;color:#444;font-weight:700;text-align:center">Когда все зайдут — ведущий скажет слово голосом<br>и нажмёт старт на своём экране</div>
+  <button class="btn btn-y" style="margin-top:24px" onclick="goToGame()">Начать рисовать!</button>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="s-game">
+  <div class="top-bar">
+    <div>
+      <div class="word-label">Слово:</div>
+      <div class="word-val" id="game-word">—</div>
+    </div>
+    <div class="players-bar" id="game-players"></div>
+  </div>
+  <div class="canvas-wrap">
+    <canvas id="canvas" width="800" height="500"></canvas>
+  </div>
+  <div class="bottom-bar">
+    <div class="joystick-label" id="jlabel">Твоя верёвка</div>
+    <div style="position:relative;width:90px;height:90px">
+      <div class="joystick-base" id="jbase" style="--pc:#FFE600">
+        <div class="joystick-knob" id="jknob" style="--pc:#FFE600"></div>
+      </div>
+    </div>
+    <div class="action-btns">
+      <button class="mini-btn btn-r" onclick="sendPenUp()">✋ Поднять перо</button>
+      <button class="mini-btn" style="background:#00ff88;color:#0a0a0f;font-weight:900" onclick="sendPenDown()">✏️ Опустить перо</button>
+      <button class="mini-btn btn-b" onclick="sendClear()">🗑 Очистить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS=['#FF6B6B','#FFE600','#6B8FFF','#00FF88','#FF9F43','#A29BFE'];
+let ws, myName, roomId, myColor='#FFE600';
+let canvas, ctx, lastX, lastY, penDown=true;
+let joystickActive=false, joystickStart={x:0,y:0};
+let vectorInterval=null;
+let currentVector={x:0,y:0};
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function joinRoom(){
+  roomId=document.getElementById('room-id').value.trim().toUpperCase();
+  myName=document.getElementById('player-name').value.trim();
+  if(!roomId||!myName){alert('Заполни оба поля!');return;}
+
+  const host=location.host;
+  ws=new WebSocket(`ws://${host}/ws/${roomId}/${myName}`);
+
+  ws.onopen=()=>{
+    showScreen('s-waiting');
+  };
+
+  ws.onmessage=(e)=>{
+    const msg=JSON.parse(e.data);
+    handleMessage(msg);
+  };
+
+  ws.onclose=()=>{
+    alert('Соединение потеряно. Перезайди.');
+    showScreen('s-join');
+  };
+}
+
+function handleMessage(msg){
+  if(msg.type==='state'||msg.type==='players'){
+    const players=msg.players||[];
+    updatePlayersList(players);
+    // Assign color by index
+    const idx=players.indexOf(myName);
+    if(idx>=0){myColor=COLORS[idx%COLORS.length];}
+    if(msg.type==='state'&&msg.word){
+      document.getElementById('game-word').textContent=msg.word;
+    }
+  }
+  else if(msg.type==='marker'){
+    drawTo(msg.x, msg.y, msg.drawing);
+    lastX=msg.x; lastY=msg.y;
+  }
+  else if(msg.type==='penup'){
+    penDown=false; ctx.beginPath();
+  }
+  else if(msg.type==='pendown'){
+    penDown=true; ctx.beginPath(); ctx.moveTo(lastX,lastY);
+  }
+  else if(msg.type==='clear'){
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.beginPath(); lastX=400; lastY=300;
+    penDown=true;
+  }
+  else if(msg.type==='word'){
+    document.getElementById('game-word').textContent=msg.word;
+  }
+}
+
+function updatePlayersList(players){
+  document.getElementById('waiting-msg').textContent=`Подключено: ${players.length}`;
+  const list=document.getElementById('players-list');
+  list.innerHTML=players.map((p,i)=>`<div class="player-chip" style="border-color:${COLORS[i%COLORS.length]};color:${COLORS[i%COLORS.length]}">${p}</div>`).join('');
+  document.getElementById('game-players').textContent=players.join(' · ');
+}
+
+function goToGame(){
+  showScreen('s-game');
+  setupCanvas();
+  setupJoystick();
+  // Update joystick color
+  document.getElementById('jbase').style.setProperty('--pc',myColor);
+  document.getElementById('jknob').style.setProperty('--pc',myColor);
+  document.getElementById('jlabel').style.color=myColor;
+  document.getElementById('jlabel').textContent=`${myName} — твоя верёвка`;
+}
+
+function setupCanvas(){
+  canvas=document.getElementById('canvas');
+  ctx=canvas.getContext('2d');
+  // Scale canvas to screen
+  const wrap=document.querySelector('.canvas-wrap');
+  const maxW=Math.min(wrap.clientWidth-16, 800);
+  const scale=maxW/800;
+  canvas.style.width=maxW+'px';
+  canvas.style.height=(500*scale)+'px';
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,800,500);
+  ctx.strokeStyle='#111';ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';
+  lastX=400; lastY=300;
+  ctx.beginPath();ctx.moveTo(lastX,lastY);
+}
+
+function drawTo(x,y,drawing){
+  if(!ctx)return;
+  if(drawing){
+    ctx.lineTo(x,y);
+    ctx.stroke();
+  }
+  ctx.beginPath();ctx.moveTo(x,y);
+}
+
+function setupJoystick(){
+  const base=document.getElementById('jbase');
+  const knob=document.getElementById('jknob');
+  const R=35;
+
+  function getPos(e){
+    if(e.touches)return{x:e.touches[0].clientX,y:e.touches[0].clientY};
+    return{x:e.clientX,y:e.clientY};
+  }
+
+  function onStart(e){
+    e.preventDefault();
+    joystickActive=true;
+    const p=getPos(e);
+    joystickStart={x:p.x,y:p.y};
+    // Start sending vectors
+    vectorInterval=setInterval(sendVector,50);
+  }
+
+  function onMove(e){
+    if(!joystickActive)return;
+    e.preventDefault();
+    const p=getPos(e);
+    let dx=p.x-joystickStart.x, dy=p.y-joystickStart.y;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist>R){dx=dx/dist*R;dy=dy/dist*R;}
+    knob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+    currentVector={x:dx/R,y:dy/R};
+  }
+
+  function onEnd(e){
+    e.preventDefault();
+    joystickActive=false;
+    knob.style.transform='translate(-50%,-50%)';
+    currentVector={x:0,y:0};
+    clearInterval(vectorInterval);
+  }
+
+  base.addEventListener('touchstart',onStart,{passive:false});
+  base.addEventListener('touchmove',onMove,{passive:false});
+  base.addEventListener('touchend',onEnd,{passive:false});
+  base.addEventListener('mousedown',onStart);
+  window.addEventListener('mousemove',e=>{if(joystickActive)onMove(e);});
+  window.addEventListener('mouseup',e=>{if(joystickActive)onEnd(e);});
+}
+
+function sendVector(){
+  if(!ws||ws.readyState!==1)return;
+  if(Math.abs(currentVector.x)<0.05&&Math.abs(currentVector.y)<0.05)return;
+  ws.send(JSON.stringify({type:'vector',x:currentVector.x,y:currentVector.y}));
+}
+
+function sendPenUp(){
+  penDown=false;
+  ws&&ws.send(JSON.stringify({type:'penup'}));
+}
+function sendPenDown(){
+  penDown=true;
+  ws&&ws.send(JSON.stringify({type:'pendown'}));
+}
+function sendClear(){
+  if(confirm('Очистить холст для всех?'))
+    ws&&ws.send(JSON.stringify({type:'clear'}));
+}
+</script>
+</body>
+</html>
