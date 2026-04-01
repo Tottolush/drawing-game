@@ -12,7 +12,7 @@ body{background:#0a0a0f;color:#fff;font-family:'Caveat',cursive;min-height:100vh
 .screen.active{display:flex}
 
 /* JOIN */
-.title{font-size:64px;font-weight:700;color:#FFE600;text-shadow:0 0 40px #FFE60088,4px 4px 0 #b8a000;line-height:1;text-align:center;margin-bottom:8px}
+.title{font-size:42px;font-weight:700;color:#FFE600;text-shadow:0 0 40px #FFE60088,3px 3px 0 #b8a000;line-height:1.2;text-align:center;margin-bottom:8px}
 .sub{font-size:22px;color:#666;margin-bottom:32px}
 .lbl{font-size:20px;color:#FFE600;margin-bottom:8px;align-self:flex-start}
 .inp{width:100%;background:#1a1a25;border:3px solid #333;border-radius:12px;padding:14px 18px;font-family:'Caveat',cursive;font-size:22px;font-weight:700;color:#fff;outline:none;margin-bottom:16px}
@@ -54,12 +54,9 @@ body{background:#0a0a0f;color:#fff;font-family:'Caveat',cursive;min-height:100vh
 
 <!-- JOIN -->
 <div class="screen active" id="s-join">
-  <div class="title">РИСУЕМ</div>
-  <div class="sub">командная игра</div>
-  <div class="lbl">код комнаты</div>
+  <div class="title">Командный рисовальщик</div>
+  <div class="lbl" style="margin-top:24px">код комнаты</div>
   <input class="inp" id="room-id" placeholder="например: GAME1" maxlength="10" style="text-transform:uppercase"/>
-  <div class="lbl">твоё имя</div>
-  <input class="inp" id="player-name" placeholder="например: Юра" maxlength="20"/>
   <button class="btn btn-y" onclick="joinRoom()">войти в комнату</button>
 </div>
 
@@ -110,8 +107,9 @@ function showScreen(id){
 
 function joinRoom(){
   roomId=document.getElementById('room-id').value.trim().toUpperCase();
-  myName=document.getElementById('player-name').value.trim();
-  if(!roomId||!myName){alert('Заполни оба поля!');return;}
+  if(!roomId){alert('Введи код комнаты!');return;}
+  // Generate random name so server still tracks players
+  myName='player_'+Math.random().toString(36).substring(2,6);
   const proto=location.protocol==='https:'?'wss:':'ws:';
   ws=new WebSocket(`${proto}//${location.host}/ws/${roomId}/${myName}`);
   ws.onopen=()=>showScreen('s-waiting');
